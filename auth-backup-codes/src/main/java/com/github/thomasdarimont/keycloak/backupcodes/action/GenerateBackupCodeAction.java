@@ -118,7 +118,6 @@ public class GenerateBackupCodeAction implements RequiredActionProvider {
                 backupCodeModel.setCredentialData(encodedBackupCode.getCredentialData());
 
                 user.credentialManager().createStoredCredential(backupCodeModel);
-                userCredentialManager.createStoredCredential(new BackupCodeCredentialModel(backupCode));
                 backupCodes.add(backupCode);
             } catch (Exception ex) {
                 log.warnf(ex, "Cloud not create backup code for user. realm=%s user=%s", realm.getId(), user.getId());
