@@ -1,5 +1,7 @@
 package com.github.thomasdarimont.keycloak.backupcodes.auth;
 
+import lombok.extern.jbosslog.JBossLog;
+
 import com.github.thomasdarimont.keycloak.backupcodes.credentials.BackupCodeCredentialModel;
 import com.github.thomasdarimont.keycloak.backupcodes.action.GenerateBackupCodeAction;
 import org.keycloak.authentication.AbstractFormAuthenticator;
@@ -24,6 +26,7 @@ import java.util.Map;
 import static org.keycloak.authentication.authenticators.util.AuthenticatorUtils.getDisabledByBruteForceEventError;
 import static org.keycloak.services.validation.Validation.FIELD_USERNAME;
 
+@JBossLog
 public class BackupCodeAuthenticator extends AbstractFormAuthenticator {
 
     public static final String ID = "auth-backup-code";
@@ -68,7 +71,7 @@ public class BackupCodeAuthenticator extends AbstractFormAuthenticator {
             return false;
         }
 
-        return session.userCredentialManager().isConfiguredFor(realm, user, BackupCodeCredentialModel.TYPE);
+        return user.credentialManager().isConfiguredFor(BackupCodeCredentialModel.TYPE);
     }
 
     protected boolean isSecondFactorRequired(KeycloakSession session, RealmModel realm, UserModel user) {
@@ -76,7 +79,7 @@ public class BackupCodeAuthenticator extends AbstractFormAuthenticator {
     }
 
     protected boolean isSecondFactorConfigured(KeycloakSession session, RealmModel realm, UserModel user) {
-        return session.userCredentialManager().isConfiguredFor(realm, user, OTPCredentialModel.TYPE);
+        return user.credentialManager().isConfiguredFor(OTPCredentialModel.TYPE);
     }
 
     @Override
@@ -101,8 +104,7 @@ public class BackupCodeAuthenticator extends AbstractFormAuthenticator {
         UserCredentialModel backupCode = new UserCredentialModel(null, BackupCodeCredentialModel.TYPE, backupCodeInput, false);
         KeycloakSession session = context.getSession();
         RealmModel realm = context.getRealm();
-
-        boolean backupCodeValid = session.userCredentialManager().isValid(realm, user, backupCode);
+        boolean backupCodeValid = user.credentialManager().isValid(backupCode);
         if (!backupCodeValid) {
             return badBackupCodeHandler(context, user, false);
         }
@@ -115,7 +117,7 @@ public class BackupCodeAuthenticator extends AbstractFormAuthenticator {
     protected void checkForRemainingBackupCodes(AuthenticationFlowContext context, KeycloakSession session, RealmModel realm, UserModel user) {
 
         // check if there are remaining backup-codes left, otherwise add required action to user
-        boolean remainingBackupCodesPresent = session.userCredentialManager().isConfiguredFor(realm, user, BackupCodeCredentialModel.TYPE);
+        boolean remainingBackupCodesPresent = user.credentialManager().isConfiguredFor(BackupCodeCredentialModel.TYPE);
         if (remainingBackupCodesPresent) {
             return;
         }

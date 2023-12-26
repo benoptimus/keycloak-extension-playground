@@ -14,6 +14,7 @@ import org.keycloak.credential.CredentialTypeMetadataContext;
 import org.keycloak.credential.hash.PasswordHashProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.SubjectCredentialManager;
 import org.keycloak.models.UserCredentialManager;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.credential.PasswordCredentialModel;
@@ -30,6 +31,10 @@ public class BackupCodeCredentialProvider implements CredentialProvider<Credenti
         this.session = session;
     }
 
+    public BackupCodeCredentialProvider getCredentialProvider(KeycloakSession session) {
+        return (BackupCodeCredentialProvider)session.getProvider(CredentialProvider.class, BackupCodeCredentialProviderFactory.ID);
+    }
+
     @Override
     public boolean supportsCredentialType(String credentialType) {
         return getType().equals(credentialType);
@@ -37,21 +42,20 @@ public class BackupCodeCredentialProvider implements CredentialProvider<Credenti
 
     @Override
     public boolean isConfiguredFor(RealmModel realm, UserModel user, String credentialType) {
-        UserCredentialManager userCredentialManager = session.userCredentialManager();
-        return userCredentialManager.getStoredCredentialsByTypeStream(realm, user, credentialType).findAny().isPresent();
+        SubjectCredentialManager userCredentialManager = user.credentialManager();
+        return userCredentialManager.getStoredCredentialsByTypeStream(credentialType).findAny().isPresent();
     }
 
     @Override
     public boolean isValid(RealmModel realm, UserModel user, CredentialInput credentialInput) {
 
         String codeInput = credentialInput.getChallengeResponse();
-
         BackupCodeConfig backupCodeConfig = getBackupCodeConfig(realm);
         PasswordHashProvider passwordHashProvider = session.getProvider(PasswordHashProvider.class,
                 backupCodeConfig.getHashingProviderId());
 
-        UserCredentialManager ucm = session.userCredentialManager();
-        List<CredentialModel> backupCodes = ucm.getStoredCredentialsByTypeStream(realm, user, getType())
+        SubjectCredentialManager ucm = user.credentialManager();
+        List<CredentialModel> backupCodes = ucm.getStoredCredentialsByTypeStream(getType())
                 .collect(Collectors.toList());
 
         for (CredentialModel backupCode : backupCodes) {
@@ -67,9 +71,9 @@ public class BackupCodeCredentialProvider implements CredentialProvider<Credenti
         return false;
     }
 
-    protected void handleUsedBackupCode(RealmModel realm, UserModel user, UserCredentialManager ucm, CredentialModel backupCode) {
+    protected void handleUsedBackupCode(RealmModel realm, UserModel user, SubjectCredentialManager ucm, CredentialModel backupCode) {
         // delete backup code entry
-        ucm.removeStoredCredential(realm, user, backupCode.getId());
+        ucm.removeStoredCredentialById(backupCode.getId());
     }
 
     @Override
@@ -100,8 +104,8 @@ public class BackupCodeCredentialProvider implements CredentialProvider<Credenti
         PasswordCredentialModel encodedBackupCode = encodeBackupCode(backupCode, backupCodeConfig, passwordHashProvider);
         CredentialModel backupCodeModel = createBackupCodeCredentialModel(backupCode, encodedBackupCode);
 
-        session.userCredentialManager().createCredential(realm, user, backupCodeModel);
-
+        user.credentialManager().createStoredCredential(backupCodeModel);
+        log.debug(backupCodeModel.getCredentialData());
         return backupCodeModel;
     }
 
@@ -132,8 +136,8 @@ public class BackupCodeCredentialProvider implements CredentialProvider<Credenti
 
     @Override
     public boolean deleteCredential(RealmModel realm, UserModel user, String credentialId) {
-        UserCredentialManager userCredentialManager = session.userCredentialManager();
-        return userCredentialManager.removeStoredCredential(realm, user, credentialId);
+        SubjectCredentialManager userCredentialManager = user.credentialManager();
+        return userCredentialManager.removeStoredCredentialById(credentialId);
     }
 
     @Override
