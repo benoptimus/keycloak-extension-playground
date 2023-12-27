@@ -92,8 +92,7 @@ public class GenerateBackupCodeAction implements RequiredActionProvider {
 
         List<BackupCode> backupCodes = new ArrayList<>();
         long now = Time.currentTimeMillis();
-        SubjectCredentialManager userCredentialManager = user.credentialManager();
-
+        
         for (int i = 1, count = backupCodeConfig.getBackupCodeCount(); i <= count; i++) {
             BackupCode backupCode = generateBackupCode(backupCodeConfig, now, i);
             try {
