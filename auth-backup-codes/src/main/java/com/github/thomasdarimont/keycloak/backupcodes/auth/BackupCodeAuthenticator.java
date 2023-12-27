@@ -89,6 +89,8 @@ public class BackupCodeAuthenticator extends AbstractFormAuthenticator {
 
     public boolean validateBackupCode(AuthenticationFlowContext context, UserModel user, MultivaluedMap<String, String> inputData) {
 
+        log.info("Here we are");
+        log.info(inputData.toString());
         String backupCodeInput = inputData.getFirst(FIELD_BACKUP_CODE);
         if (backupCodeInput == null || backupCodeInput.isEmpty()) {
             return badBackupCodeHandler(context, user, true);
